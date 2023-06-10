@@ -1,8 +1,10 @@
 /***
  * LLM KIT
  * 
+ * Version 1.1 
+ * 
  * An Apex class for building complicated prompts for LLMs
- * and submitting them to ChatGPT - all for use with OmniStudio.
+ * and submitting them to ChatGPT - all for use with OmniStudio
  * 
  * There are two big pieces to this class.  The first is a templating system
  * that allow us to store complicated prompt templates as static resources.
@@ -44,15 +46,17 @@
  ***/
 
 /**
- * There are three main sections to this class:
+ * There are four main sections to this class:
  * 
  * 1. The interface section, which provides the appropriate methods to allow
  *    the code to be called from OmniStudio
  * 
- * 2. The template processing section, which implements our Jinja2-inspired
+ * 2. Utilities
+ * 
+ * 3. The template processing section, which implements our Jinja2-inspired
  *    templating language for inserting data from Salesforce into a prompt
  * 
- * 3. The OpenAI interface section, which manages the calls to OpenAI
+ * 4. The OpenAI interface section, which manages the calls to OpenAI
 
  */
 global with sharing class LLMkit implements Callable
@@ -100,10 +104,33 @@ global with sharing class LLMkit implements Callable
             return call_openai(input, output, options);
         }
 
+        if (methodName == 'getSRasJSON') {
+            return getSRasJSON(input,output,options);
+        }
 
         output.put('response', 'No Such Method '+methodName);  
         return false; 
     }
+
+    /************************************************************************/
+    /*  Section 2: Utilities                                                */
+    /************************************************************************/
+
+    /**
+     * Debugging function, taken from: https://ideas.salesforce.com/s/feed/0D58W000069LiQ8SAK
+     * 
+     * Commented out when not used to avoid affecting coverage counts...
+     */
+
+    // public static String get_object_type(Object obj) { 
+    //     String result = 'DateTime'; 
+    //     try { DateTime typeCheck = (DateTime)obj; } 
+    //     catch(System.TypeException te) { 
+    //         String message = te.getMessage().substringAfter('Invalid conversion from runtime type '); 
+    //         result = message.substringBefore(' to Datetime'); 
+    //     } 
+    //     return result; 
+    // }
     
     /**
      * ping
@@ -116,11 +143,6 @@ global with sharing class LLMkit implements Callable
         output.put('response', 'pong');
         return true;
     }
-
-
-    /************************************************************************/
-    /*  Section 2: Template Processing                                      */
-    /************************************************************************/
 
 
     /**
@@ -142,43 +164,29 @@ global with sharing class LLMkit implements Callable
        return svc[0].Body.toString();
     }
 
-    /**
-     * literal_or_static
-     * 
-     * If the first character of the string is "@", the rest is the name of a
-     * static resource.  In that case, fetch it and return the contents.
-     * 
-     * If the first character is not, just return the input string
-     */
-    private String literal_or_static(String los) {
-        if (los == null) {
-            return null;
-        }
-        if (!los.startsWith('@')) {
-            return los;
+    private Object getSRasJSON(Map<String,Object> input, map<String,Object> output, map<String,Object> options) {
+        String resource_name = (String) (options.get('resource'));
+        String path_name = (String) (options.get('path'));
+
+        String sr;
+
+        if (options.containsKey('mock_response')) {
+            sr = (String) (options.get('mock_response'));
         } else {
-            String sr = read_static_resource(los.substring(1));
-            return sr;
+            sr = read_static_resource(resource_name);
         }
+        Map<String,Object> response = new Map<String,Object>();
+        response.put(path_name, JSON.deserializeUntyped(sr));
+
+        output.put('response', response);
+        return true;
     }
 
-    /**
-     * get_object_type
-     * 
-     * Salesforce does not have a built-in mechanism to get the type of a variable,
-     * so you have to stand on your head to find out.
-     * 
-     * Adapted from: https://ideas.salesforce.com/s/feed/0D58W000069LiQ8SAK
-     */
-    // public static String get_object_type(Object obj) { 
-    //     String result = 'DateTime'; 
-    //     try { DateTime typeCheck = (DateTime)obj; } 
-    //     catch(System.TypeException te) { 
-    //         String message = te.getMessage().substringAfter('Invalid conversion from runtime type '); 
-    //         result = message.substringBefore(' to Datetime'); 
-    //     } 
-    //     return result; 
-    // }
+
+    /************************************************************************/
+    /*  Section 3: Template Processing                                      */
+    /************************************************************************/
+
 
 
     /**
@@ -445,11 +453,20 @@ global with sharing class LLMkit implements Callable
             return null;
         }
 
-        String input_template = literal_or_static(template);    // function handles @ or not
-        if (input_template == null) {
-            return null;
-        }
+        String input_template = '';
+        // If template name starts with ', then it is a literal template
+        if (!template.startsWith('@')) {
+            input_template = template;
+        } else {
+            // Find the static resource and handle the case where it is not present
+            String template_name = template.substring(1);
+            input_template = read_static_resource(template_name);
+            if (input_template == null) {
+                return null;
+            }
 
+
+        }
         String output_template = '';
 
         // Tokenize the template
@@ -482,22 +499,16 @@ global with sharing class LLMkit implements Callable
 
 
     /************************************************************************/
-    /*  Section 3: Calling OpenAI                                           */
+    /*  Section 4: Calling OpenAI                                           */
     /************************************************************************/
 
 
-    /**
-     * openai_model
-     * 
-     * For this class, there are two types of models we use.  One is an older
-     * set of models (e.g., text-davinci-003), which are NOT chat models. They
-     * accept one prompt as an input.  The other are the chat models (e.g., gpt-4)
-     * and they accept a series of prompts.
-     */
+    //  Models
+
     private class openai_model {
         String model_name;
         String model_endpoint;
-        Boolean isChat;             // basically, old-style or new-style
+        Boolean isChat;
 
         public openai_model(String mn, String me, Boolean ic) {
             this.model_name = mn;
@@ -506,12 +517,6 @@ global with sharing class LLMkit implements Callable
         }
     }
 
-    /**
-     * get_models
-     * 
-     * Assembles a list of models, mostly so we know what kind of input
-     * to pass to them
-     */
     private Map<String,openai_model> get_models() {
         Map<String,openai_model> map_of_models = new Map<String,openai_model>();
 
@@ -535,26 +540,6 @@ global with sharing class LLMkit implements Callable
     }
 
 
-    /**
-     * get_option
-     * 
-     * We have two sources of options: the ones passed in and (potentially) a service specification
-     * Look first in the service specification and then override with the passed in options
-     */
-    String get_option(String name, Map<String,Object> passed, Map<String,Object> service) {
-        String result = null;
-        if (service != null) {
-            if (service.containsKey(name)) {
-                result = String.valueOf(service.get(name));
-            }
-        }
-
-        if (passed.containsKey(name)) {
-            result = String.valueOf(passed.get(name));
-        }
-
-        return result;
-    }
 
     /**
      * call_openai
@@ -586,10 +571,6 @@ global with sharing class LLMkit implements Callable
      *          - raw_response (if you want to see the raw response from the REST endpoint)
      *          - json_response (we take the text response and deserialize it for you)
      * 
-     *      For openai_service, system_template, user_template, and template parameters, they can
-     *      either be literal strings or they can start with the '@' character followed by the
-     *      name of a static resource.  In the second case, the contents of the named static resource
-     *      is used.
      */
     private Boolean call_openai(Map<String,Object> input, map<String,Object> output, map<String,Object> options) {
 
@@ -600,22 +581,21 @@ global with sharing class LLMkit implements Callable
         //  First step: Collect all our options
         //  ---------------------------------------------------
 
-        Map <String,Object> service_options = null;
-
         //  Look to see if we have a openai_service file for one and done sourcing of parameters
         if (options.containsKey('openai_service')) {
             String openai_service_name = (String) (options.get('openai_service'));
-            String openai_service = literal_or_static(openai_service_name);
+            String openai_service = read_static_resource(openai_service_name);
             if (openai_service == null) {
-                output.put('error', 'The openai_service static resource ' + openai_service_name + ' was not found');
+                output.put('error', 'The openai_service_name static resource ' + openai_service_name + ' was not found');
                 return false;
             }
 
-            service_options = (Map<String,Object>) JSON.deserializeUntyped(openai_service);
+            //  Replace the passed in options with the ones from the static resource
+            options = (Map<String,Object>) JSON.deserializeUntyped(openai_service);
         }
 
         //  First, get the model name as that drives some other option choices:
-        String model_name = get_option('model', options, service_options);
+        String model_name = (String)options.get('model');
         if (model_name == null) {
             output.put('error', 'model_name is required option');
             return false;
@@ -630,11 +610,11 @@ global with sharing class LLMkit implements Callable
         //  Retrieve the options that control what we do
 
         //  We need either a Named Credential or an API key
-        String named_credential_name = get_option('named_credential', options, service_options);
+        String named_credential_name = (String)options.get('named_credential');
         String api_key = null;
 
         if (named_credential_name == null) {
-            api_key = get_option('api_key', options, service_options);
+            api_key = (String) options.get('api_key');
             if (api_key == null) {
                 output.put('error', 'Require either named_credential or api_key');
                 return false;
@@ -647,22 +627,26 @@ global with sharing class LLMkit implements Callable
 
         //  Get the template(s) for the prompt (depending on what type of call this is)
         if (model.isChat) {
-            system_template_name =get_option('system_template', options, service_options);
-            user_template_name = get_option('user_template', options, service_options);
+            system_template_name = (String)options.get('system_template');
+            user_template_name = (String)options.get('user_template');
         } else {
-            prompt_template_name = get_option('prompt_template', options, service_options);
+            prompt_template_name = (String)options.get('prompt_template');
         }
 
-        String temperature = get_option('temperature', options, service_options);
-
-        String max_tokens = get_option('max_tokens', options, service_options);
+        String temperature = null;
+        if (options.containsKey('temperature')) {
+            temperature = String.valueOf(options.get('temperature'));
+        }
+        String max_tokens = null;
+        if (options.containsKey('max_tokens')) {
+            max_tokens = String.valueOf(options.get('max_tokens'));
+        }
 
         //  Note that the default timeout in Salesforce is too low to work
         //  with OpenAI reliably, we our default is the maximum, 2 minutes.
         Integer timeout_limit = 120000;
-        String s_timeout = get_option('timeout', options, service_options);
-        if (s_timeout != null) {
-            timeout_limit = Integer.valueOf(s_timeout);
+        if (options.containsKey('timeout')) {
+            timeout_limit = Integer.valueOf(options.get('timeout'));
         }
 
         //  A mock response has our code skip the actual calling of OpenAI and
@@ -670,21 +654,22 @@ global with sharing class LLMkit implements Callable
         //  avoiding unnecessary charges.  This is also used by ChatKitTest,
         //  as you are NOT allowed to make outbound REST calls when called from
         //  a unit test, and so this will prevent that from happening too.
-        String mock_response = literal_or_static(get_option('mock_response', options, service_options));
+        String mock_response = null;
+        if (options.containsKey('mock_response')) {
+            mock_response = String.valueOf(options.get('mock_response'));
+        }
 
         //  If you want to see the raw response from ChatGPT, set this to true
         Boolean raw_response = false;
-        String s_raw_response = get_option('raw_response', options, service_options);
-        if (s_raw_response != null) {
-            raw_response = Boolean.valueOf(s_raw_response);
+        if (options.containsKey('raw_response')) {
+            raw_response = Boolean.valueOf(options.get('raw_response'));
         }
 
         // We can take the text message generated by OpenAI and convert it
         // into JSON for you.  Hopefully, your prompt works :-)
         Boolean json_response = false;
-        String s_json_response = get_option('json_response', options, service_options);
-        if (s_json_response != null) {
-            json_response = Boolean.valueOf(s_json_response);
+        if (options.containsKey('json_response')) {
+            json_response = Boolean.valueOf(options.get('json_response'));
         }
 
         System.debug('Finished fetching options');

@@ -96,6 +96,7 @@ There are three callable methods:
 | ping              | Just returns "pong", but slightly useful to check to see if you can call the class during installation.  See the test class for an example of how it works. |
 | generate_template | You pass it in your data, a template (or the name of a static resource file that holds the template), and it inserts the data into the template and returns the results to you. |
 | call_openai       | This takes your data, populates the prompt(s), sends it off to OpenAI, patiently (very patiently) awaits a reply and then sends it to you. |
+| getSRasJSON       | Reads in a static resource which contains a JSON structure, parses it, and returns it to the caller.  Useful for holding ad-hoc collections of data. |
 
 
 
@@ -292,5 +293,18 @@ The method returns, in output:
 
 
 
+------
 
+### Method: getSRasJSON
 
+In OmniScript, you often need to build bundles of data as JSON (or, really, JavaScript) structures.  The typical method is to use a Set Values which you edit as JSON.  The editor, however, is not good at complicated structures.  The `getSRasJSON` method offers an alternative, at a cost of a Remote Action call; it reads in a static resource and parses it as JSON.  In this manner, you can maintain (and potentially reuse) more complicated JSON structures outside of OmniScript.
+
+Unusual for many calls, all the arguments to the call are options.  They are:
+
+| Key           | Value                                                        |
+| ------------- | ------------------------------------------------------------ |
+| resource      | Required. The name of the static resource                    |
+| path          | Required. The top level name to put the retrieved JSON under. |
+| mock_response | Optional. Not typically used, this is a JSON string that will be parsed and returned as if it were coming from a static resource. The intended user is the test class (which does not rely on any given static resource being present), but it does provide a way to deserialize a JSON string, I supposed. |
+
+It returns the retrieved JSON data under the name provided in `path`.

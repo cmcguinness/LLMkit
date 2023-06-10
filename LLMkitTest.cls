@@ -256,12 +256,12 @@ private class  LLMkitTest {
     @isTest
     static void test_good_service() {
 
-        // // In order to perform this test, the requisite static resource also needs to be present
-        // StaticResource[] svc = [SELECT Id, Body FROM StaticResource WHERE Name = 'LLMkitTestService01' LIMIT 1];
-        // if (svc.size() == 0) {
-        //     System.debug('test_good_service: *** REQUIRED LLMkitTestService01 STATIC RESOURCE NOT PRESENT AND PUBLIC');
-        // }
-        // System.assert(svc.size() != 0);
+        // In order to perform this test, the requisite static resource also needs to be present
+        StaticResource[] svc = [SELECT Id, Body FROM StaticResource WHERE Name = 'LLMkitTestService01' LIMIT 1];
+        if (svc.size() == 0) {
+            System.debug('test_good_service: *** REQUIRED LLMkitTestService01 STATIC RESOURCE NOT PRESENT AND PUBLIC');
+        }
+        System.assert(svc.size() != 0);
 
         // Now on with the show
 
@@ -270,8 +270,7 @@ private class  LLMkitTest {
         Map<String,Object> options =args.get('options');
         Map<String,Object> input = args.get('input');
 
-        options.put('openai_service', '{\n\"prompt_template\": \"the precise contents here do not matter\",\n\"model\": \"text-davinci-003\",\n\"mock_response\": \"THIS IS A MOCK RESPONSE\",\n\"api_key\": \"sk-1234567890\"\n}');
-        // options.put('openai_service', '@LLMkitTestService01');
+        options.put('openai_service', 'LLMkitTestService01');
         llmkit.call('call_openai', args);
         Map<String,Object> output = args.get('output');
         System.debug('.test_good_service output: ' + JSON.serialize(output));
@@ -299,7 +298,7 @@ private class  LLMkitTest {
         System.debug('.test_bad_service output: ' + JSON.serialize(output));
 
         String response = String.valueOf(args.get('output').get('error'));
-        System.assert(response == 'The openai_service static resource @ThisIsAServiceThatDoesNotExist was not found');
+        System.assert(response == 'The openai_service_name static resource @ThisIsAServiceThatDoesNotExist was not found');
 
     }
 
@@ -355,6 +354,29 @@ private class  LLMkitTest {
         String response = String.valueOf(args.get('output').get('error'));
         System.assert(response == 'Require either named_credential or api_key');
 
+    }
+
+    /**
+     * test getSRasJSON
+     */
+    @isTest
+    static void test_getSRasJSON(){
+        LLMkit llmkit = new LLMkit();
+        Map<String,Map<String,Object>> args = createArgs();
+        Map<String,Object> options =args.get('options');
+        options.put('resource','DOES NOT MATTER');
+        options.put('path', 'testdata');
+        options.put('mock_response','{"a":"b"}');
+
+        llmkit.call('getSRasJSON', args);
+        
+        Map<String,Object> output = args.get('output');
+        System.assert(output.containsKey('response'));
+        Map<String,Object> response = (Map<String,Object> ) output.get('response');
+        System.assert(response.containsKey('testdata'));
+        Map<String,Object> testdata = (Map<String,Object> ) response.get('testdata');
+        System.assert(testdata.containsKey('a'));
+        
     }
 
 
