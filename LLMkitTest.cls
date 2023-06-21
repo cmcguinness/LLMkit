@@ -11,8 +11,15 @@
  * 
  */
 
-@isTest
-private class  LLMkitTest {
+ @isTest
+ public with sharing class LLMkitTest {
+
+    /**
+     * createArgs
+     * 
+     * Create a set of empty input, options, and output maps that we need for any call
+     * into LLMkit.
+     */
     static Map<String,Map<String,Object>>  createArgs() {
         Map<String,Map<String,Object>> args = new Map<String,Map<String,Object>>();
         args.put('input',new Map<String,Object>());
@@ -22,7 +29,19 @@ private class  LLMkitTest {
     }
 
     //  -------------------------------------------------------------------------
-    //  1.  "ping" method testing
+    //  No such method error testing
+    //  -------------------------------------------------------------------------
+    @isTest
+    static void text_bad_method() {
+        LLMkit llmkit = new LLMkit();
+        Map<String,Map<String,Object>> args = createArgs();
+
+        llmkit.call('THIS DOES NOT EXIST', args);
+        System.assert(args.get('output').containsKey('error'));
+    }
+
+    //  -------------------------------------------------------------------------
+    //  "ping" method testing
     //  -------------------------------------------------------------------------
 
     /**
@@ -44,7 +63,7 @@ private class  LLMkitTest {
     }
 
     //  -------------------------------------------------------------------------
-    //  2.  "generate_template" method testing
+    //  "generate_template" method testing
     //  -------------------------------------------------------------------------
 
     /**
@@ -127,19 +146,21 @@ private class  LLMkitTest {
 
 
     //  -------------------------------------------------------------------------
-    //  3.  "call_openai" method testing
-    //
-    //  WARNING
-    //
-    //  Because tests are not allowed to make actual calls, while these tests
-    //  exercise the code, they do not and can not test how OpenAI would
-    //  actually respond to our calls.
-    //
-    //  We could use the HTTP mock interfaces to call back to us and try to
-    //  implement a mock OpenAI, but that seems futile.  So be aware that
-    //  you will want to do live testing outside of a Salesforce test class
-    //  as part of your due dilligance. 
+    //  "call_openai" method testing
     //  -------------------------------------------------------------------------
+    
+    /**
+     * WARNING
+     * 
+     * Because tests are not allowed to make actual calls, while these tests
+     * exercise the code, they do not and can not test how OpenAI would
+     * actually respond to our calls.
+     * 
+     * We could use the HTTP mock interfaces to call back to us and try to implement 
+     * a mock OpenAI, but that only garners a bit more coverage. So be aware that
+     * you will want to do live testing outside of a Salesforce test class
+     * as part of your due dilligance. 
+     */
 
     /**
      *  callChatGPTtest
@@ -153,12 +174,16 @@ private class  LLMkitTest {
         Map<String,Object> options =args.get('options');
         Map<String,Object> input = args.get('input');
 
+        List<Map<String,Object>> history = new  List<Map<String,Object>>();
+
         options.put('user_template', 'I would like to buy widgets in the following colors and quantities:\n\n{% if Step1.selWhite %} White: {{ Step1.selWhite }}{% else %} {% endif %}\n{% if Step1.selBlack %} Black: {{ Step1.selBlack }} {% endif %}\n{% if Step1.selRed %} Red: {{ Step1.selRed }} {% endif %}\n{% if Step1.selBlue %} Blue: {{ Step1.selBlue }} {% endif %}\n{% if Step1.selGreen %} Green: {{ Step1.selGreen }} {% endif %}\n{% if Step1.selCyan %} Cyan: {{ Step1.selCyan }} {% endif %}\n{% if Step1.selMagenta %} Magenta: {{ Step1.selMagenta }} {% endif %}\n{% if Step1.selYellow %} Yellow: {{ Step1.selYellow }} {% endif %}\n\nIs that allowed?');
         options.put('system_template', '{# This is a comment #}\n\nYou are an order management specialist at a widget factory.  \nThere are 8 different types of widgets: \n\n* The primary colors: red, blue, and green\n* The secondary colors: yellow, magenta, and cyan\n* Two desaturated colors: black, and white.\n\nFor every cyan widget someone buys, they must also buy one more blue and one more green widget.\n\nFor every yellow widget someone buys, they must also buy an additional red and green widget.\n\nFor every magenta widget someone buys, they must also buy an additional red and a blue widget.\n\nThe widgets in red, blue, green, black, and white have no restrictions on them.\n\nThe required additional widgets are additive. Thus, if you buy two secondary colored widgets, \nyou have to buy the corresponding four primary colored widgets to meet the requirements.\n\nFor example, if you buy yellow and magenta, you will must but two reds, one green, and one blue in your order.\n\nYour job is to look at an order a customer wants to make and to verify that it follows the rules.\n\nThe way to do this is to look at each of the secondary colors, add up the required primary colors,\nand make sure the order has at least that many of each primary color.\n \nExplain your reasoning step by step.');
         options.put('model', 'gpt-4');
         options.put('temperature', '0.0');
         options.put('mock_response', 'THIS IS A MOCK RESPONSE');
         options.put('named_credential', 'OpenAI');
+        options.put('history', history);
+        options.put('text_history','true');
 
         args.put('input', ((Map<String,Object>)JSON.deserializeUntyped('{\n\"Names\": [\n  \"Alice\", \"Bob\", \"Carl\"\n],\n  \"Step1\": {\n    \"selWhite\": \"1\",\n    \"selBlack\": \"0\",\n    \"selRed\": \"1\",\n    \"selBlue\": \"1\",\n    \"selGreen\": \"1\",\n    \"selCyan\": \"1\",\n    \"selMagenta\": \"0\",\n    \"selYellow\": \"1\"\n  }\n}')));
 
@@ -168,6 +193,13 @@ private class  LLMkitTest {
 
         String response = String.valueOf(args.get('output').get('response'));
         System.assert(response == 'THIS IS A MOCK RESPONSE');
+
+        List<Object> back_history = (List<Object>) (args.get('output').get('history'));
+        System.assert(back_history.size() == 2);
+
+        String text_history = (String) output.get('history_text');
+
+        System.assert(text_history.length() > 0);
 
     }
 
@@ -196,7 +228,7 @@ private class  LLMkitTest {
         System.debug('.callGPTtest output: ' + JSON.serialize(output));
 
         String response = String.valueOf(args.get('output').get('response'));
-        System.assert(response == 'THIS IS A MOCK RESPONSE');
+        System.assert(response.equals('THIS IS A MOCK RESPONSE'));
 
     }
 
@@ -234,6 +266,7 @@ private class  LLMkitTest {
         options.put('temperature', '0.0');
         options.put('mock_response', '{\\"itworks\\": true}');
         options.put('json_response','true');
+        options.put('max_tokens','1024');
         options.put('named_credential', 'OpenAI');
 
         args.put('input', ((Map<String,Object>)JSON.deserializeUntyped('{\n\"Names\": [\n  \"Alice\", \"Bob\", \"Carl\"\n],\n  \"Step1\": {\n    \"selWhite\": \"1\",\n    \"selBlack\": \"0\",\n    \"selRed\": \"1\",\n    \"selBlue\": \"1\",\n    \"selGreen\": \"1\",\n    \"selCyan\": \"1\",\n    \"selMagenta\": \"0\",\n    \"selYellow\": \"1\"\n  }\n}')));
@@ -256,21 +289,13 @@ private class  LLMkitTest {
     @isTest
     static void test_good_service() {
 
-        // In order to perform this test, the requisite static resource also needs to be present
-        StaticResource[] svc = [SELECT Id, Body FROM StaticResource WHERE Name = 'LLMkitTestService01' LIMIT 1];
-        if (svc.size() == 0) {
-            System.debug('test_good_service: *** REQUIRED LLMkitTestService01 STATIC RESOURCE NOT PRESENT AND PUBLIC');
-        }
-        System.assert(svc.size() != 0);
-
-        // Now on with the show
-
         LLMkit llmkit = new LLMkit();
         Map<String,Map<String,Object>> args = createArgs();
         Map<String,Object> options =args.get('options');
         Map<String,Object> input = args.get('input');
 
-        options.put('openai_service', 'LLMkitTestService01');
+        options.put('openai_service', '{\n\"prompt_template\": \"the precise contents here do not matter\",\n\"model\": \"text-davinci-003\",\n\"mock_response\": \"THIS IS A MOCK RESPONSE\",\n\"api_key\": \"sk-1234567890\"\n}');
+        // options.put('openai_service', '@LLMkitTestService01');
         llmkit.call('call_openai', args);
         Map<String,Object> output = args.get('output');
         System.debug('.test_good_service output: ' + JSON.serialize(output));
@@ -298,7 +323,7 @@ private class  LLMkitTest {
         System.debug('.test_bad_service output: ' + JSON.serialize(output));
 
         String response = String.valueOf(args.get('output').get('error'));
-        System.assert(response == 'The openai_service_name static resource @ThisIsAServiceThatDoesNotExist was not found');
+        System.assert(response == 'The openai_service static resource @ThisIsAServiceThatDoesNotExist was not found');
 
     }
 
@@ -364,20 +389,38 @@ private class  LLMkitTest {
         LLMkit llmkit = new LLMkit();
         Map<String,Map<String,Object>> args = createArgs();
         Map<String,Object> options =args.get('options');
-        options.put('resource','DOES NOT MATTER');
+        options.put('resource','NORMALLY THE NAME OF A STATIC RESOURCE');
         options.put('path', 'testdata');
         options.put('mock_response','{"a":"b"}');
 
         llmkit.call('getSRasJSON', args);
         
         Map<String,Object> output = args.get('output');
-        System.assert(output.containsKey('response'));
-        Map<String,Object> response = (Map<String,Object> ) output.get('response');
-        System.assert(response.containsKey('testdata'));
-        Map<String,Object> testdata = (Map<String,Object> ) response.get('testdata');
+        System.assert(output.containsKey('testdata'));
+        Map<String,Object> testdata = (Map<String,Object> ) output.get('testdata');
         System.assert(testdata.containsKey('a'));
         
     }
 
+    /**
+     * test get_sr_as_json
+     */
+    @isTest
+    static void test_get_sr_as_json(){
+        LLMkit llmkit = new LLMkit();
+        Map<String,Map<String,Object>> args = createArgs();
+        Map<String,Object> options =args.get('options');
+        options.put('resource','NORMALLY THE NAME OF A STATIC RESOURCE');
+        options.put('path', 'testdata');
+        options.put('mock_response','{"a":"b"}');
+
+        llmkit.call('get_sr_as_json', args);
+        
+        Map<String,Object> output = args.get('output');
+        System.assert(output.containsKey('testdata'));
+        Map<String,Object> testdata = (Map<String,Object> ) output.get('testdata');
+        System.assert(testdata.containsKey('a'));
+        
+    }
 
 }

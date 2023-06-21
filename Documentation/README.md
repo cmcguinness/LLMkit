@@ -15,7 +15,7 @@ That is  the inverse of the order of readability, however.
 
 
 
-## Philosophy
+# Philosophy
 
 Rather than building a series of specific, one-off interfaces to OpenAI, the class provides a completely generic, parameter driven interface that does a lot of the heavy lifting for you.  It supports the notion of bundling the parameters into a "service" (for example, a life insurance recommender) that can be re-used and shared.  The users of the service need not know how the service works (although it's not hidden) to get the benefit from it.
 
@@ -47,7 +47,7 @@ In general, the deployment-time flow will look like this:
 
 
 
-## Installation
+# Installation
 
 There are two .cls files to install. It's easiet to upload them as well in the Setup section of the web UI. Start by going to Setup, search for "classes", and click on Apex Classes. 
 
@@ -59,7 +59,7 @@ Once you've loaded it, you can go to Class Summary and run the test. You now hav
 
 
 
-## Calling Pattern
+# Calling Pattern
 
 The class is named "LLMkit", and it follows the OmniStudio (aka Vlocity) Open Interface standard.  If you're not used to it, it represents a very different approach from standard Apex classes.  In general technical terms, it implements a "late-binding" approach: the method we want to call is passed in as a string.  The class finds the method for you at runtime (late) rather than the normal Apex way, at compile time (early).
 
@@ -87,22 +87,22 @@ Generally speaking, the test  class contains many useful (if somewhat artificial
 
 
 
-## Methods Supported
+# Methods Supported
 
-There are three callable methods:
+There are four callable methods:
 
 | Method            | Description                                                  |
 | ----------------- | ------------------------------------------------------------ |
 | ping              | Just returns "pong", but slightly useful to check to see if you can call the class during installation.  See the test class for an example of how it works. |
 | generate_template | You pass it in your data, a template (or the name of a static resource file that holds the template), and it inserts the data into the template and returns the results to you. |
 | call_openai       | This takes your data, populates the prompt(s), sends it off to OpenAI, patiently (very patiently) awaits a reply and then sends it to you. |
-| getSRasJSON       | Reads in a static resource which contains a JSON structure, parses it, and returns it to the caller.  Useful for holding ad-hoc collections of data. |
+| get_sr_as_json    | Reads in a static resource which contains a JSON structure, parses it, and returns it to the caller.  Useful for holding ad-hoc collections of data. (Also callable as getSRasJSON for backwards compatibility) |
 
 
 
 ------
 
-### Method: ping
+## Method: ping
 
 Only useful as a quick test to see if the class is available.  Has no inputs, returns in output a "response" property with the value "pong".
 
@@ -118,7 +118,7 @@ To call from Apex see the method `test_ping()` in the test class.
 
 ------
 
-### Method: generate_template
+## Method: generate_template
 
 This will take a template specified in *options* (see below for format) and populate it with data out of *input*.  The resulting template is returned in *response* as a string.
 
@@ -134,7 +134,7 @@ Note that the *template* can either be a template literal (that is, just the tex
 
 
 
-#### Template Format
+### Template Format
 
 The template format is a very simplified version of the Jinja2 templating system used by Python.  This is so that you can develop templates using a Python tool such as [this Google Colab notebook](https://colab.research.google.com/drive/1Cc0aev-Ro9atCsYiH_d0VhgjVHNPzrL2?usp=sharing) and them use them in Salesforce. In general, the text of the template is copied verbatim except when one of these three is encountered:
 
@@ -183,7 +183,7 @@ However, you can have a *for* inside an *if*, or an *if* inside a *for*, but you
 
 
 
-##### Template Example
+#### Template Example
 
 This is an example used in the unit test *test_generate_template_logic* from the test class:
 
@@ -199,7 +199,7 @@ This generates:
 
 ------
 
-### Method: call_openai
+## Method: call_openai
 
 This is the most important method, and therefore the most complicated.
 
@@ -212,7 +212,7 @@ Let's start with the inputs to call_openai.  When you are calling from OmniScrip
 
 There's not much to say about the input (and what there is to say is mostly covered in the documentation for generate_template).
 
-#### Options
+### Options
 
 Here are the options that affect the call.  They will be further discussed after the table.
 
@@ -229,10 +229,15 @@ Here are the options that affect the call.  They will be further discussed after
 | mock_response                                   | N         | If provided, this is used as the result and the actual call to OpenAI is not made.  Useful for testing and demos. |
 | raw_response                                    | N         | Normally, the text response from OpenAI is fished out of the JSON structure which the REST calls return.  If this is provided and is true, the entire return from OpenAI will be returned from the method. |
 | json_response                                   | N         | If you expect that the response from OpenAI is going to be a JSON structure rather than just text (that is, your prompts tell OpenAI to return JSON), including this option and setting it to true will cause the method to convert the string to JSON so you get a data structure back instead of a string. |
+| history                                         | N         | A set of previous messages (see "History" below) that comprise earlier chat history |
+| max_history                                     | N         | The maximum number of previous interactions to return as a means of pruning history |
+| text_history                                    | N         | Indicates whether a pre-formatted string of the history should be returned |
+| additional_data                                 | N         | Hard coded data the method should return (see "Additional Data" below) |
+| additional_name                                 | N         | The top level name the additional data should have           |
 
 
 
-##### @ Syntax
+#### @ Syntax
 
 The options openai_service, system_template, user_template, prompt_template, and mock_response allows you to either include a literal string or the name of a static resource to fetch the value from.  If the first character is an '@', then the rest of the option is taken as the name of a static resource that will be read and used.  Here's an example that shows one of each style:
 
@@ -242,62 +247,87 @@ In this case, the service definition is coming from a static resource called cha
 
 
 
-##### openai_service
+#### openai_service
 
 While you can provide all the options directly to make a call to OpenAI, the intent (see Philosophy) is that you will put them together into a service specification.  A service's specification is a JSON structure, which holds all of the parameters and options needed to call a service (but not the input data, of course).  While you can pass in a complete service specification as an option to the call, it is normal to keep the service specification in a static resource.  There are samples provided in the [Demos](../Demos) subdirectory of this repository.
 
 The logic of the class is that it will first look for the value of an option in the directly passed in values and, if not found, then look in the service definition.  This allows you to use a service definition but override values in it (or add things, like the mock_response in the image above).
 
-##### model
+#### model
 
 Specifies the name of the model, using the same naming convention that OpenAI uses.  Note that if OpenAI adds new models, the source to the class will need to be updated.  The name of the model is used to determine what the calling convention is (chat or not).
 
-##### named_credential, api_key
+#### named_credential, api_key
 
 All calls to OpenAI require a API key. The best way to do that, in Salesforce, is to used a Named Credential.  If you are not familiar with Named Credentials, you can see my [newsletter article](https://mcguinnessai.substack.com/p/fixing-the-one-glaring-problem-so) on the topic.  As an alternative, and although I discourage it, is to supply the api_key you'll use directly.  One of the two must be present.
 
-##### system_template, user_template, prompt_template
+#### system_template, user_template, prompt_template
 
 These are the templates that will be sent to OpenAI as your prompts.  system_template, user_template are both required if you're calling gpt-4 or gpt-3.5-turbo, and just prompt_template is required for older models.  These follow the @ syntax, so they can be specified directly or as static resources.  Note, however, in OmniScript, it is nearly impossible to pass literal templates if you are using any logic in your templates, as OmniScript will delete anything between matching %s.  That problem does not happen if the template is embedded in the service defition, fortunately.
 
-##### temperature, max_tokens
+#### temperature, max_tokens
 
 These is passed directly to OpenAI. Refer to [their documentation](https://platform.openai.com/docs/api-reference/chat/create) for an explanation of the values.
 
-##### timeout
+#### timeout
 
 Salesforce has a default timeout of 10 seconds for REST calls, which is way too short.  The library replaces that with a default timeout of 120 seconds, the maximum.  If you have a reason for something different, specify it here, in milliseconds.
 
-##### mock_response
+#### mock_response
 
 If you specify this parameter, the call will *not* make an actual call to OpenAI; instead, it will pretend this was the content of the response from a fake call.  This is useful if you are working on other aspects of your integration and don't need to make endless calls, you want your demos to work quickly, or are building test classes.  This follows the @ syntax, so you can either give a string or the name of a static resource that holds your mock response.
 
-##### raw_response
+#### raw_response
 
 OpenAI returns a JSON structure containing all sorts of information, including the text of the response.  Normally, we just fish the text out of the JSON structure and return "response" set to that in the output.  Additionally, we return an output of "raw_response" that contains the full response from OpenAI.  Passing in this option with a value that's true will cause response to hold the full response too.
 
-##### json_response
+#### json_response
 
 With clever prompt engineering, you can get OpenAI to return not merely a text response, but a structured JSON object that has a more complicated response.  OmniScript is not great at handling strings with JSON data in them, however, and normally you have to either use a DataRaptor or custom code to turn the string into proper data.  If you include this option in your call, the response from OpenAI will be deserialized back to a real data structure, avoiding additional work for the OmniScript.
+
+#### history, max_history, text_history
+
+If you wish to build a conversational ("Chat") UI, with subsequent user inputs being understood in the context of earlier interactions, it is incumbent on the client application to maintain the history of interactions and supply that on each call to the OpenAI API.  These three parameters are used to accomplish that.
+
+Upon return from a call to gpt-4 or gpt-3.5-turbo, call_openai will return a "history" output that contains the conversation up to and including the last interaction.  The structure of `history` is the following:
+
+`[ {"role": "user", "content": "user's input"}, {"role": "assistant", "content": "model's ouput"}, ...]`
+
+I.e., an array of dictionaries, even numbered elements containing the user's input and odd numbered elements containing the mode's output (starting numbering at 0, as one does).
+
+The simplest method for carrying the history forward is to feed this back into the `history` option (both the option and output are named the same, which is less confusing than it seems.). That, however, presents a problem in that a long winded chat can grow quite a lengthy history and the models have to parse the entire history anew on each call.
+
+The solution to that problem is the `max_history` option, which limits the number of previous conversations.  If you specify `5` as the `max_history`, then only up to the previous 5 interactions will be returned in the `history` output (which means the size of the array will be 10, because each interaction takes two elements).  A higher value for `max_history` may require you to have a larger value for `max_tokens` to handle the sizeable input or even require switching to the 16k or 32k models at some point (with risks of significant increased costs).
+
+Because the returned  `history` structure can be a bit difficult to consume directly in OmniScript (you might consider asembling a Flexcard to display it), there's an additional option called `text_history` that can be set to `true`.  If you do that, then another output, `history_text` is created where the history is returned as a single string with newlines and labels to format the conversation. 
+
+#### additional_data, additional_name
+
+This is a bit of a hack to make it a bit easier to build chat-driven OmniScripts.  If both are specified, then the output of the call includes a top level entry with the name specified in `additional_name`, containing the data specified in `additional_data`.  I used this to clear the input field upon return from the call.
+
+
 
 #### Return from call_openai
 
 The method returns, in output:
 
-| Key             | Value                                                        |
-| --------------- | ------------------------------------------------------------ |
-| elapsed_seconds | How long, in seconds, it took to call OpenAI and get a response |
-| raw_response    | A string holding the body of the response from OpenAI.  This would need to be deserialized most likely for further use, but it's intended mostly as a debugging. |
-| response        | The response from OpenAI.  Absent the options raw_response and json_response, it's just the text of the response.  With json_response, it's deserialized into a data structure (error if not deserializable).  With raw_response, it's the same data as in raw_response except deserialized – that is, the entire response from OpenAI in a parsed structure. |
-| error           | Rut-roh, something bad happened.                             |
+| Key               | Value                                                        |
+| ----------------- | ------------------------------------------------------------ |
+| elapsed_seconds   | How long, in seconds, it took to call OpenAI and get a response |
+| raw_response      | A string holding the body of the response from OpenAI.  This would need to be deserialized most likely for further use, but it's intended mostly as a debugging. |
+| response          | The response from OpenAI.  Absent the options raw_response and json_response, it's just the text of the response.  With json_response, it's deserialized into a data structure (error if not deserializable).  With raw_response, it's the same data as in raw_response except deserialized – that is, the entire response from OpenAI in a parsed structure. |
+| error             | Rut-roh, something bad happened.                             |
+| history           | An array of user inputs and system responses, as documented above in the section on `history` |
+| history_text      | A human readable form of `history`, optionally returned      |
+| *additional_name* | Any additional data that was passed into the options, as documented above. |
 
 
 
 ------
 
-### Method: getSRasJSON
+### Method: get_sr_as_json
 
-In OmniScript, you often need to build bundles of data as JSON (or, really, JavaScript) structures.  The typical method is to use a Set Values which you edit as JSON.  The editor, however, is not good at complicated structures.  The `getSRasJSON` method offers an alternative, at a cost of a Remote Action call; it reads in a static resource and parses it as JSON.  In this manner, you can maintain (and potentially reuse) more complicated JSON structures outside of OmniScript.
+In OmniScript, you often need to build bundles of data as JSON (or, really, JavaScript) structures.  The typical method is to use a Set Values which you edit as JSON.  The editor, however, is not good at complicated structures.  The `get_sr_as_json` method offers an alternative, at a cost of a Remote Action call; it reads in a static resource and parses it as JSON.  In this manner, you can maintain (and potentially reuse) more complicated JSON structures outside of OmniScript.
 
 Unusual for many calls, all the arguments to the call are options.  They are:
 
