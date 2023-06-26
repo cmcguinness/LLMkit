@@ -1017,7 +1017,12 @@
              }
              List<object> choices = (List<object>) (results.get('choices'));
              if (choices == null) {
-                 u_add_error(output, 'Did not receive a response from OpenAI');
+                Map<String,Object> error_obj = (Map<String,Object>) (results.get('error'));
+                if (error_obj == null) {
+                    u_add_error(output, 'Did not receive a response from OpenAI');
+                } else {
+                    u_add_error(output, 'Error from OpenAI: ' + String.valueOf(error_obj.get('message')));
+                }
                  return false;
              }
              Map<String,Object> choice = ( Map<String,Object> ) (choices[0]);
