@@ -878,10 +878,11 @@
          }
  
          String max_history = u_get_option('max_history', options, service_options);
+        //  System.debug('max_history='+String.valueOf(max_history));
          List<Map<String,String>> history = u_get_history(options);
  
  
-         System.debug('Finished fetching options');
+        //  System.debug('Finished fetching options');
  
          //  ---------------------------------------------------
          //  Second step: Populate the data into the template(s)
@@ -898,21 +899,21 @@
                  return false;
  
              }
-             System.debug('User template generated');
+            //  System.debug('User template generated');
  
              system_template = populate_template(system_template_name, input);
              if (system_template == null) {
                  output.put('error', 'The system template ' + String.valueOf(system_template_name) + ' was not found');
                  return false;
              }
-             System.debug('System template generated');
+            //  System.debug('System template generated');
          } else {
              prompt_template = populate_template(prompt_template_name, input);
              if (prompt_template == null) {
                  output.put('error', 'The prompt template ' + String.valueOf(prompt_template_name) + ' was not found');
                  return false;
              }
-             System.debug('Prompt template generated');
+            //  System.debug('Prompt template generated');
          }
  
          //  ---------------------------------------------------
@@ -958,7 +959,7 @@
  
          String request_body = JSON.serialize(input_request);
  
-         System.debug('Input JSON generated');
+        //  System.debug('Input JSON generated');
  
          //  ---------------------------------------------------
          //  Fourth step: Make the REST call
@@ -1036,10 +1037,13 @@
  
                  // Trim away too old of history
                  if (max_history != null) {
+                    // System.debug('Checking History length');
                      Integer imax = 2 * Integer.valueOf(max_history);
-                     if (imax > history.size()) {
-                         for (Integer i=0;i<history.size()-imax;i++) {
-                             history.remove(0);
+                     Integer overage = history.size()-imax;
+                     if (overage > 0) {
+                         for (Integer i=0;i<overage;i++) {
+                            // System.debug('Remove');
+                            history.remove(0);
                          }
                      }
                  }
