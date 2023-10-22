@@ -3,7 +3,7 @@
  * 
  * https://github.com/cmcguinness/LLMkit
  * 
- * Version 2.0
+ * Version 2.1
  * 
  * An Apex class for building complicated prompts for LLMs
  * and submitting them to ChatGPT - all for use with OmniStudio
@@ -724,8 +724,7 @@
           map_of_models.put('gpt-4-32k-0613', new openai_model('gpt-4-32k-0613','/v1/chat/completions',true));
           map_of_models.put('gpt-3.5-turbo-0613', new openai_model('gpt-3.5-turbo-0613','/v1/chat/completions',true));
           map_of_models.put('gpt-3.5-turbo-16k-0613', new openai_model('gpt-3.5-turbo-16k-0613','/v1/chat/completions',true));
- 
- 
+  
  
           return map_of_models;
      }
@@ -804,6 +803,12 @@
          }
          
          openai_model model = get_models().get(model_name);
+
+         // Fine tuning?
+         if (model == null && model_name.startsWith('ft:')) {
+            model = new openai_model(model_name,'/v1/chat/completions',true);
+         }
+
          if (model == null) {
              output.put('error', 'I do not know of a model named '+model_name);
              return false;
