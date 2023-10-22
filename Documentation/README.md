@@ -255,7 +255,7 @@ The logic of the class is that it will first look for the value of an option in 
 
 #### model
 
-Specifies the name of the model, using the same naming convention that OpenAI uses.  Note that if OpenAI adds new models, the source to the class will need to be updated.  The name of the model is used to determine what the calling convention is (chat or not).
+Specifies the name of the model, using the same naming convention that OpenAI uses.  Note that if OpenAI adds new models, the source to the class will need to be updated.  The name of the model is used to determine what the calling convention is (chat or not).  Any model that starts with *ft:* is assumed be a fine-tuned version of *gpt-3.5-turbo*.
 
 #### named_credential, api_key
 
