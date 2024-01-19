@@ -37,7 +37,7 @@
  */
 
 /**
- * Copyright (c) 2023 Charles McGuinness<charles@mcguinness.us>
+ * Copyright (c) 2024 Charles McGuinness<charles@mcguinness.us>
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -697,36 +697,47 @@
       * get_models
       * 
       * Assembles a list of models, mostly so we know what kind of input
-      * to pass to them
+      * to pass to them.
+      *
+      * For an up to date list of models, see: https://platform.openai.com/docs/models
       */
      private Map<String,openai_model> get_models() {
-         Map<String,openai_model> map_of_models = new Map<String,openai_model>();
-  
-         //  This are the models that use the "older" completions endpoint (just one input prompt)
-         map_of_models.put('text-davinci-003', new openai_model('text-davinci-003','/v1/completions', false));
-         map_of_models.put('text-davinci-002', new openai_model('text-davinci-002','/v1/completions', false));
-         map_of_models.put('text-davinci-001', new openai_model('text-davinci-001','/v1/completions', false));
-         map_of_models.put('text-babbage-001', new openai_model('text-babbage-001','/v1/completions', false));
-         map_of_models.put('text-ada-001', new openai_model('text-ada-001','/v1/completions', false));
- 
-          //  This are the models that uses the "newer" chat/completions endpoint (system and user inputs)
-          map_of_models.put('gpt-4', new openai_model('gpt-4','/v1/chat/completions',true));
-          map_of_models.put('gpt-4-32k', new openai_model('gpt-4-32k','/v1/chat/completions',true));
-          map_of_models.put('gpt-3.5-turbo', new openai_model('gpt-3.5-turbo','/v1/chat/completions',true));
-          map_of_models.put('gpt-3.5-turbo-16k', new openai_model('gpt-3.5-turbo-16k','/v1/chat/completions',true));
- 
-          // This are the time stamped models that will constantly change...
-          map_of_models.put('gpt-4-0314', new openai_model('gpt-4-0314','/v1/chat/completions',true));
-          map_of_models.put('gpt-4-32k-0314', new openai_model('gpt-4-32k-0314','/v1/chat/completions',true));
-          map_of_models.put('gpt-3.5-turbo-0301', new openai_model('gpt-3.5-turbo-0301','/v1/chat/completions',true));
- 
-          map_of_models.put('gpt-4-0613', new openai_model('gpt-4-0613','/v1/chat/completions',true));
-          map_of_models.put('gpt-4-32k-0613', new openai_model('gpt-4-32k-0613','/v1/chat/completions',true));
-          map_of_models.put('gpt-3.5-turbo-0613', new openai_model('gpt-3.5-turbo-0613','/v1/chat/completions',true));
-          map_of_models.put('gpt-3.5-turbo-16k-0613', new openai_model('gpt-3.5-turbo-16k-0613','/v1/chat/completions',true));
-  
- 
-          return map_of_models;
+        Map<String,openai_model> map_of_models = new Map<String,openai_model>();
+
+        //  This are the models that use the "older" completions endpoint (just one input prompt)
+        map_of_models.put('text-davinci-002', new openai_model('text-davinci-002','/v1/completions', false));
+        map_of_models.put('text-babbage-002', new openai_model('text-babbage-001','/v1/completions', false));
+        map_of_models.put('gpt-3.5-turbo-instruct', new openai_model('gpt-3.5-turbo-instruct','/v1/completions', false));
+
+
+        //  These are the models that uses the "newer" chat/completions endpoint (system and user inputs)
+        map_of_models.put('gpt-4', new openai_model('gpt-4','/v1/chat/completions',true));
+        map_of_models.put('gpt-4-32k', new openai_model('gpt-4-32k','/v1/chat/completions',true));
+        map_of_models.put('gpt-3.5-turbo', new openai_model('gpt-3.5-turbo','/v1/chat/completions',true));
+        map_of_models.put('gpt-3.5-turbo-16k', new openai_model('gpt-3.5-turbo-16k','/v1/chat/completions',true));
+
+
+        //  These are the time stamped models that will constantly change...
+        map_of_models.put('gpt-3.5-turbo-0301', new openai_model('gpt-3.5-turbo-0301','/v1/chat/completions',true));
+
+        map_of_models.put('gpt-4-0613', new openai_model('gpt-4-0613','/v1/chat/completions',true));
+        map_of_models.put('gpt-4-32k-0613', new openai_model('gpt-4-32k-0613','/v1/chat/completions',true));
+        map_of_models.put('gpt-3.5-turbo-0613', new openai_model('gpt-3.5-turbo-0613','/v1/chat/completions',true));
+        map_of_models.put('gpt-3.5-turbo-16k-0613', new openai_model('gpt-3.5-turbo-16k-0613','/v1/chat/completions',true));
+
+        map_of_models.put('gpt-4-1106-preview', new openai_model('gpt-4-1106-preview','/v1/chat/completions',true));
+        map_of_models.put('gpt-3.5-turbo-1106', new openai_model('gpt-3.5-turbo-1106','/v1/chat/completions',true));
+
+        //  Retired Models
+        //      map_of_models.put('text-davinci-003', new openai_model('text-davinci-003','/v1/completions', false));
+        //      map_of_models.put('gpt-4-0314', new openai_model('gpt-4-0314','/v1/chat/completions',true));
+        //      map_of_models.put('gpt-4-32k-0314', new openai_model('gpt-4-32k-0314','/v1/chat/completions',true));
+        //      map_of_models.put('text-davinci-001', new openai_model('text-davinci-001','/v1/completions', false));
+        //      map_of_models.put('text-babbage-001', new openai_model('text-babbage-001','/v1/completions', false));
+        //      map_of_models.put('text-ada-001', new openai_model('text-ada-001','/v1/completions', false));
+
+
+        return map_of_models;
      }
  
  
