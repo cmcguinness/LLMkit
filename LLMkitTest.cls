@@ -216,7 +216,7 @@
         Map<String,Object> input = args.get('input');
 
         options.put('prompt_template', 'I would like to buy widgets in the following colors and quantities:\n\n{% if Step1.selWhite %} White: {{ Step1.selWhite }}{% else %} {% endif %}\n{% if Step1.selBlack %} Black: {{ Step1.selBlack }} {% endif %}\n{% if Step1.selRed %} Red: {{ Step1.selRed }} {% endif %}\n{% if Step1.selBlue %} Blue: {{ Step1.selBlue }} {% endif %}\n{% if Step1.selGreen %} Green: {{ Step1.selGreen }} {% endif %}\n{% if Step1.selCyan %} Cyan: {{ Step1.selCyan }} {% endif %}\n{% if Step1.selMagenta %} Magenta: {{ Step1.selMagenta }} {% endif %}\n{% if Step1.selYellow %} Yellow: {{ Step1.selYellow }} {% endif %}\n\nIs that allowed?');
-        options.put('model', 'text-davinci-003');
+        options.put('model', 'text-davinci-002');
         options.put('temperature', '0.0');
         options.put('mock_response', 'THIS IS A MOCK RESPONSE');
         options.put('named_credential', 'OpenAI');
@@ -262,7 +262,7 @@
         Map<String,Object> input = args.get('input');
 
         options.put('prompt_template', 'This really does not matter');
-        options.put('model', 'text-davinci-003');
+        options.put('model', 'text-davinci-002');
         options.put('temperature', '0.0');
         options.put('mock_response', '{\\"itworks\\": true}');
         options.put('json_response','true');
@@ -294,7 +294,7 @@
         Map<String,Object> options =args.get('options');
         Map<String,Object> input = args.get('input');
 
-        options.put('openai_service', '{\n\"prompt_template\": \"the precise contents here do not matter\",\n\"model\": \"text-davinci-003\",\n\"mock_response\": \"THIS IS A MOCK RESPONSE\",\n\"api_key\": \"sk-1234567890\"\n}');
+        options.put('openai_service', '{\n\"prompt_template\": \"the precise contents here do not matter\",\n\"model\": \"text-davinci-002\",\n\"mock_response\": \"THIS IS A MOCK RESPONSE\",\n\"api_key\": \"sk-1234567890\"\n}');
         // options.put('openai_service', '@LLMkitTestService01');
         llmkit.call('call_openai', args);
         Map<String,Object> output = args.get('output');
